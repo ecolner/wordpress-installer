@@ -12,5 +12,7 @@ INSTRUCTIONS:
 Open your Ubuntu console and enter these commands to run the installer
 
 > wget https://raw.github.com/ecolner/wordpress-installer/master/wordpress-installer.pl
+
 > chmod a+x wordpress-installer.pl
+
 > ./wordpress-installer.pl
