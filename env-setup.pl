@@ -47,7 +47,7 @@ sub promptSite() {
 # MAIN
 my $cwd = getcwd();
 my $site = "";
-if (scalar(@ARGV) > 0 && $ARGV[0] ne undef) {
+if (scalar(@ARGV) > 0) {
    $site = $ARGV[0];
 }
 if ($site eq "") {

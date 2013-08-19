@@ -22,7 +22,10 @@ sub run {
 }
 
 # MAIN
-my $domain_name = $ARGV[0]; #optional
+my $domain_name = ""; #optional
+if (scalar(@ARGV) > 0) {
+   $domain_name = $ARGV[0];
+}
 
 # update Apt repo
 run ("apt-get", "-y", "update");
