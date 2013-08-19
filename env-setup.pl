@@ -21,11 +21,12 @@ sub disconnect_db {
 }
 
 sub query_db {
-   my $printable_query = $_[1];
-   $printable_query =~ s/password[\s]*\([\s]*.*[\s]*\)/PASSWORD\([REMOVED]\)/gi;
-   print STDOUT "Running query: $printable_query\n";
+   my $query_str = $_[1];
+   my $printable_query_str = $query_str;
+   $printable_query_str =~ s/$password/REDACTED/g;
+   print STDOUT "Running query: $printable_query_str\n";
    my $dbh = $_[0];
-   my $sth = $dbh->prepare($_[1]);
+   my $sth = $dbh->prepare($query_str);
    $sth->execute
       or die "SQL Error: $DBI::errstr\n";
    if (index ($_[1], "SELECT") == 0) {
