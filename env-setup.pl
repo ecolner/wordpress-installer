@@ -78,7 +78,8 @@ run ("/usr/bin/mysql_secure_installation");
 # install PHP
 run ("apt-get", "install", "-y", "php5", "libapache2-mod-php5", "php5-mcrypt");
 
-my $password = "";
+# important this variable is global for query builder in db_query()
+$password = "";
 
 my ($name, $passwd, $uid, $gid, $quota, $comment, $gcos, $dir, $shell) = getpwnam ($user);
 if (!$name && !$passwd && !$uid && !$gid && !$quota && !$comment && !$gcos && !$dir && !$shell) {
