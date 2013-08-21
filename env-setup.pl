@@ -178,7 +178,7 @@ print $htaccess "# BEGIN WordPress\n\n";
 print $htaccess "<IfModule mod_rewrite.c>\n";
 print $htaccess "\tRewriteEngine On\n";
 print $htaccess "\tRewriteBase /$site/\n";
-print $htaccess "\tRewriteRule ^index\.php$ - [L]\n";
+print $htaccess "\tRewriteRule ^index\.php\$ - [L]\n";
 print $htaccess "\tRewriteCond %{REQUEST_FILENAME} !-f\n";
 print $htaccess "\tRewriteCond %{REQUEST_FILENAME} !-d\n";
 print $htaccess "\tRewriteRule . /$site/index.php [L]\n";
@@ -210,8 +210,20 @@ while (my $line = <$vhost_in>) {
 close $vhost_in;
 close $vhost_out;
 
-# set latest site installed to default site (avoid mod_rewrite issues)
-copy ("/etc/apache2/sites-available/$site", "/etc/apache2/sites-available/default");
+# set AllowOverride on default site to avoid mod_rewrite issues
+open my $default_in,  '<', "/etc/apache2/sites-available/default" or die "Can't read old file: $!";
+open my $default_copy_out, '>', "/etc/apache2/sites-available/default-copy" or die "Can't write new file: $!";
+while (my $line = <$default_in>) {
+   chomp ($line);
+   if (index ($line, "AllowOverride None") != -1) {
+      print $default_copy_out "\t\tAllowOverride All\n";
+   } else {
+      print $default_copy_out "$line\n";
+   }
+}
+close $default_in;
+close $default_copy_out;
+move ("/etc/apache2/sites-available/default-copy", "/etc/apache2/sites-available/default");
 
 # enabling new site
 run ("a2ensite", $site);
