@@ -211,7 +211,7 @@ close $vhost_in;
 close $vhost_out;
 
 # set latest site installed to default site (avoid mod_rewrite issues)
-move ("/etc/apache2/sites-available/$site", "/etc/apache2/sites-available/default");
+copy ("/etc/apache2/sites-available/$site", "/etc/apache2/sites-available/default");
 
 # enabling new site
 run ("a2ensite", $site);
