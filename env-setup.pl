@@ -171,11 +171,26 @@ close $in;
 close $out;
 
 move ("$cwd/$site", "/var/www/$site");
+
+# create new site .htaccess vhost override
+open my $htaccess, '>', "/var/www/$site/.htaccess" or die "Can't create .htaccess file $!";
+print $htaccess "# BEGIN WordPress\n\n";
+print $htaccess "<IfModule mod_rewrite.c>\n";
+print $htaccess "\tRewriteEngine On\n";
+print $htaccess "\tRewriteBase /$site/\n";
+print $htaccess "\tRewriteRule ^index\.php$ - [L]\n";
+print $htaccess "\tRewriteCond %{REQUEST_FILENAME} !-f\n";
+print $htaccess "\tRewriteCond %{REQUEST_FILENAME} !-d\n";
+print $htaccess "\tRewriteRule . /$site/index.php [L]\n";
+print $htaccess "</IfModule>\n\n";
+print $htaccess "# END WordPress\n";
+close $htaccess;
+
 run ("chown", "-R", "www-data:www-data", "/var/www/$site");
 run ("usermod", "-G", "www-data", "-a", "$user");
 run ("apt-get", "install", "-y", "php5-gd");
 
-# create new site virtual host configuration from the default site
+# create new site vhost configuration from the default site
 open my $vhost_in,  '<', "/etc/apache2/sites-available/default" or die "Can't read old file: $!";
 open my $vhost_out, '>', "/etc/apache2/sites-available/$site" or die "Can't write new file: $!";
 while (my $line = <$vhost_in>) {
@@ -195,14 +210,17 @@ while (my $line = <$vhost_in>) {
 close $vhost_in;
 close $vhost_out;
 
-# disabling default site
-run ("a2dissite", "default");
+# set latest site installed to default site (avoid mod_rewrite issues)
+move ("/etc/apache2/sites-available/$site", "/etc/apache2/sites-available/default");
 
 # enabling new site
 run ("a2ensite", $site);
 
 # enabling mod rewrite for permalinks
 run ("a2enmod", "rewrite");
+
+# reload Apache
+run ("service", "apache2", "reload");
 
 # restart Apache
 run ("service", "apache2", "restart");
