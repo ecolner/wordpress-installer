@@ -121,14 +121,21 @@ my $mysql_user = prompt ("MySQL username (for root press enter): ", -d => "root"
 $mysql_user = trim ($mysql_user);
 my $mysql_pw = prompt ("MySQL password: ", -e=>"*");
 
+# mysql user name can't be longer than 16 characters
+my $wordpress_db_user = $user;
+if (length ($wordpress_db_user) > 16) {
+   $wordpress_db_user = substr ($wordpress_db_user, 0, 16);
+   print STDOUT "Due to mysql 16 char user name limit truncated wordpress db user name to: $wordpress_db_user\n";
+}
+
 my $dbh = connect_db ($mysql_user, $mysql_pw);
 query_db ($dbh, "CREATE DATABASE IF NOT EXISTS $user");
-my $users = query_db ($dbh, "SELECT User FROM mysql.user WHERE User = '$user'");
+my $users = query_db ($dbh, "SELECT User FROM mysql.user WHERE User = '$wordpress_db_user'");
 if (scalar (@$users) == 0) {
-   query_db ($dbh, "CREATE USER $user\@localhost");
+   query_db ($dbh, "CREATE USER $wordpress_db_user\@localhost");
 }
-query_db ($dbh, "SET PASSWORD FOR $user\@localhost = PASSWORD('$password')");
-query_db ($dbh, "GRANT ALL PRIVILEGES ON $user.* TO $user\@localhost IDENTIFIED BY '$password'");
+query_db ($dbh, "SET PASSWORD FOR $wordpress_db_user\@localhost = PASSWORD('$password')");
+query_db ($dbh, "GRANT ALL PRIVILEGES ON $user.* TO $wordpress_db_user\@localhost IDENTIFIED BY '$password'");
 query_db ($dbh, "FLUSH PRIVILEGES");
 disconnect_db ($dbh);
 
@@ -148,7 +155,7 @@ while (my $line = <$in>) {
    if (index ($line, "database_name_here") != -1) {
       print $out "define('DB_NAME', '$user');\n";
    } elsif (index ($line, "username_here") != -1) {
-      print $out "define('DB_USER', '$user');\n";
+      print $out "define('DB_USER', '$wordpress_db_user');\n";
    } elsif (index ($line, "password_here") != -1) {
       print $out "define('DB_PASSWORD', '$password');\n";
    } else {
