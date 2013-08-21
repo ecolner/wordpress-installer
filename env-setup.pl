@@ -65,6 +65,11 @@ if (!$cont) {
    exit (0);
 }
 
+my $email = prompt ("Site administrator email [ENTER to skip]: ");
+if (length ($email) == 0) {
+   $email = "webmaster\@localhost";
+}
+
 print STDOUT "Installing Wordpress dependencies... (Apache2, MySQL Server, PHP)\n\n";
 
 # install Apache2
@@ -170,6 +175,7 @@ run ("chown", "-R", "www-data:www-data", "/var/www/$site");
 run ("usermod", "-G", "www-data", "-a", "$user");
 run ("apt-get", "install", "-y", "php5-gd");
 
+# create new site virtual host configuration from the default site
 open my $vhost_in,  '<', "/etc/apache2/sites-available/default" or die "Can't read old file: $!";
 open my $vhost_out, '>', "/etc/apache2/sites-available/$site" or die "Can't write new file: $!";
 while (my $line = <$vhost_in>) {
@@ -177,9 +183,11 @@ while (my $line = <$vhost_in>) {
    if (index ($line, "DocumentRoot") != -1) {
       print $vhost_out "\tDocumentRoot /var/www/$site\n";
    } elsif (index ($line, "ServerAdmin") != -1) {
-      print $vhost_out "\tServerAdmin ecolner\@gmail.com\n";
+      print $vhost_out "\tServerAdmin $email\n";
       print $vhost_out "\tServerName $site\n";
       print $vhost_out "\tServerAlias www.$site\n";
+   } elsif (index ($line, "AllowOverride None") != -1) {
+      print $vhost_out "\t\tAllowOverride All\n";
    } else {
       print $vhost_out "$line\n";
    }
@@ -187,14 +195,14 @@ while (my $line = <$vhost_in>) {
 close $vhost_in;
 close $vhost_out;
 
-# enabling site virtual host
+# disabling default site
+run ("a2dissite", "default");
+
+# enabling new site
 run ("a2ensite", $site);
 
 # enabling mod rewrite for permalinks
 run ("a2enmod", "rewrite");
-
-# activation site virtual host
-run ("service", "apache2", "reload");
 
 # restart Apache
 run ("service", "apache2", "restart");
