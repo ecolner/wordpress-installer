@@ -190,6 +190,9 @@ close $vhost_out;
 # enabling site virtual host
 run ("a2ensite", $site);
 
+# enabling mod rewrite for permalinks
+run ("a2enmod", "rewrite");
+
 # activation site virtual host
 run ("service", "apache2", "reload");
 
