@@ -1,4 +1,6 @@
 #!/usr/bin/perl -w
+ use strict;
+ use warnings;
  use File::Path;
  use File::Copy;
  use DBI;
