@@ -2,14 +2,19 @@
  use strict;
  use warnings;
  use CPAN;
+ 
  CPAN::install("File::Path");
  eval "use File::Path";
+ 
  CPAN::install("File::Copy");
  eval "use File::Copy";
+ 
  CPAN::install("DBI");
  eval "use DBI";
+ 
  CPAN::install("IO::Prompt");
  eval "use IO::Prompt";
+ 
  CPAN::install("Cwd");
  eval "use Cwd";
 
@@ -37,6 +42,16 @@ if ($site eq "") {
 my $user = "$site";
 $user =~ s/\./_/g;
 
+if (-d "/var/www/$site") {
+   my $overwrite = prompt ("Wordpress already installed at /var/www/$site... overwrite? [y]: ", -yn);
+   if ($overwrite) {
+      rmtree ("/var/www/$site") or die "Error deleting existing Wordpress install: $!";
+   } else {
+      print STDOUT "Aborted.  Goodbye!\n";
+      exit (0);
+   }
+}
+
 print STDOUT "\nStarting installation...\n\n";
 my $cont = prompt ("Continue installing $site? [y]: ", -ynd => "y");
 if (!$cont) {
@@ -55,7 +70,7 @@ print STDOUT "Installing Wordpress dependencies... (Apache2, MySQL Server, PHP)\
 run ("apt-get", "install", "-y", "apache2");
 
 # install Mysql
-run ("apt-get", "install", "-y", "mysql-server", "libapache2-mod-auth-mysql", "php5-mysql");
+run ("apt-get", "install", "-y", "mysql-server", "php5-mysql");
 run ("mysql_install_db");
 run ("/usr/bin/mysql_secure_installation");
 
@@ -88,16 +103,6 @@ unless (-e "/home/$user") {
    mkdir "/home/$user";
 }
 chown $uid, $gid, ("/home/$user");
-
-if (-d "/var/www/$site") {
-   my $overwrite = prompt ("Wordpress already installed at /var/www/$site... overwrite? [y]: ", -yn);
-   if ($overwrite) {
-      rmtree ("/var/www/$site") or die "Error deleting existing Wordpress install: $!";
-   } else {
-      print STDOUT "Aborted installation\n";
-      exit (0);
-   }
-}
 
 # prepare Mysql for Wordpress
 print STDOUT "Setting up MySQL Database for $site\n";
@@ -170,8 +175,8 @@ run ("usermod", "-G", "www-data", "-a", "$user");
 run ("apt-get", "install", "-y", "php5-gd");
 
 # create new site vhost configuration from the default site
-open my $vhost_in,  '<', "/etc/apache2/sites-available/default" or die "Can't read old file: $!";
-open my $vhost_out, '>', "/etc/apache2/sites-available/$site" or die "Can't write new file: $!";
+open my $vhost_in,  '<', "/etc/apache2/sites-available/000-default.conf" or die "Can't read old file: $!";
+open my $vhost_out, '>', "/etc/apache2/sites-available/$site.conf" or die "Can't write new file: $!";
 while (my $line = <$vhost_in>) {
    chomp ($line);
    if (index ($line, "DocumentRoot") != -1) {
@@ -190,8 +195,8 @@ close $vhost_in;
 close $vhost_out;
 
 # set AllowOverride on default site to avoid mod_rewrite issues
-open my $default_in,  '<', "/etc/apache2/sites-available/default" or die "Can't read old file: $!";
-open my $default_copy_out, '>', "/etc/apache2/sites-available/default-copy" or die "Can't write new file: $!";
+open my $default_in,  '<', "/etc/apache2/sites-available/000-default.conf" or die "Can't read old file: $!";
+open my $default_copy_out, '>', "/etc/apache2/sites-available/000-default-copy.conf" or die "Can't write new file: $!";
 while (my $line = <$default_in>) {
    chomp ($line);
    if (index ($line, "AllowOverride None") != -1) {
@@ -202,7 +207,7 @@ while (my $line = <$default_in>) {
 }
 close $default_in;
 close $default_copy_out;
-move ("/etc/apache2/sites-available/default-copy", "/etc/apache2/sites-available/default");
+move ("/etc/apache2/sites-available/000-default-copy.conf", "/etc/apache2/sites-available/000-default.conf");
 
 # enabling new site
 run ("a2ensite", $site);
@@ -218,10 +223,22 @@ run ("service", "apache2", "restart");
 
 print STDOUT "\n\n";
 print STDOUT "Wordpress installation complete\n\n";
-print STDOUT "To finish the Wordpress website setup go to:\n";
+print STDOUT "To configure the Wordpress website setup go to:\n";
 print STDOUT "\t$site/wp-admin/install.php\n";
 print STDOUT "\n\n";
 
+print STDOUT "It's recommended that you secure your server to prevent many common threats\n";
+my $secure = prompt ("Secure your server now? [y]: ", -ynd => "y");
+if ($secure) {
+    # invoke setup script
+    run ("wget https://raw.github.com/ecolner/wordpress-installer/master/secure-server.pl");
+    run ("chmod a+x ./secure-server.pl");
+    do {
+        my @ARGV = ($site);
+        eval { require "secure-server.pl" };
+    };
+}
+print STDOUT "Done.  Goodbye!\n";
 
 # UTILS
 sub trim {
